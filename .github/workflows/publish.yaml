@@ -1,22 +1,39 @@
-name: CI Pipeline
-
+name: Build and Publish Python Package to Nexus
 
 on:
   push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
-
+    branches:
+      - nexus
 
 jobs:
-  build:
-    runs-on: ubuntu-latest  
+  deploy:
+    runs-on: ubuntu-latest
 
     steps:
-     
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - name: Checkout repo
+        uses: actions/checkout@v3
 
-      
-      - name: Run a simple command
-        run: echo "Hola, este es mi primer workflow en GitHub Actions 🚀"
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install build & twine
+        run: |
+          pip install --upgrade build twine
+
+      - name: Build package
+        run: |
+          python -m build
+
+      - name: List build output
+        run: |
+          ls -la
+          ls -la dist
+
+      - name: Upload package to Nexus PyPI
+        env:
+          TWINE_USERNAME: ${{ secrets.NEXUS_USERNAME }}
+          TWINE_PASSWORD: ${{ secrets.NEXUS_PASSWORD }}
+        run: |
+          twine upload --repository-url "${{ secrets.NEXUS_URL }}" dist/*.tar.gz dist/*.whl
